@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Discover sample events</h2>
+<p>
+  <label>Subsource
+    <select id="ss">
+      <option>graph.directoryAudits</option>
+      <option>graph.signIns</option>
+      <option>graph.provisioning</option>
+      <option>mgmt.SharePoint</option>
+      <option>mgmt.Exchange</option>
+      <option>mgmt.AzureActiveDirectory</option>
+      <option>mgmt.General</option>
+    </select>
+  </label>
+  <label>N <input id="n" type="number" value="50" min="1" max="500"></label>
+  <button onclick="run()">Sample</button>
+</p>
+<div id="out"><em>No samples yet. Discovery is read-only — nothing is inserted.</em></div>
+<script>
+async function run() {
+  const ss = document.getElementById('ss').value;
+  const n  = document.getElementById('n').value;
+  document.getElementById('out').textContent = 'Loading...';
+  const r = await fetch(`/discover/sample?subsource=${encodeURIComponent(ss)}&n=${n}`);
+  const j = await r.json();
+  const out = document.getElementById('out');
+  if (j.error) { out.innerHTML = '<p class="err">'+j.error+'</p>'; return; }
+  let html = `<p>Got ${j.count} events. Inferred schema:</p>`;
+  html += '<table><tr><th>Path</th><th>Types</th><th>Sample</th><th>Null rate</th></tr>';
+  for (const [path, info] of Object.entries(j.schema)) {
+    const s = JSON.stringify(info.sample);
+    html += `<tr><td><code>${path}</code></td><td>${info.types.join(', ')}</td>`
+         + `<td><code>${s ? s.slice(0,80) : ''}</code></td>`
+         + `<td>${info.null_rate}</td></tr>`;
+  }
+  html += '</table>';
+  out.innerHTML = html;
+}
+</script>
+{% endblock %}

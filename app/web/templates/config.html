@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Configuration</h2>
+
+<div id="db-status"
+     style="padding: 0.6rem 0.8rem; border: 1px solid #d0d7de; border-radius: 6px; margin-bottom: 1rem; background: #f6f8fa;">
+  <em>Loading database status…</em>
+</div>
+
+<p>
+  <button onclick="testConn('db')">Test DB</button>
+  <button onclick="testConn('graph')">Test Graph</button>
+  <button onclick="testConn('mgmt')">Test Mgmt API</button>
+  <span id="result"></span>
+</p>
+<form method="post" action="/config">
+  <h3>Azure</h3>
+  <p>
+    <label>AZURE_CLOUD
+      <select name="AZURE_CLOUD">
+        {% for c in ["commercial","gcc-high","dod","china"] %}
+        <option {% if settings.azure_cloud==c %}selected{% endif %}>{{c}}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </p>
+  <p><label>AZURE_TENANT_ID
+    <input name="AZURE_TENANT_ID" value="{{settings.azure_tenant_id}}" size="48"></label></p>
+  <p><label>AZURE_CLIENT_ID
+    <input name="AZURE_CLIENT_ID" value="{{settings.azure_client_id}}" size="48"></label></p>
+  <p><label>AZURE_CLIENT_SECRET
+    <input name="AZURE_CLIENT_SECRET" type="password" placeholder="(unchanged)" size="48"></label></p>
+  <p><label>M365_REDIRECT_URI
+    <input name="M365_REDIRECT_URI" value="{{settings.m365_redirect_uri}}" size="60"></label></p>
+
+  <h3>Database</h3>
+  <p>
+    <label>DB_HOST <input name="DB_HOST" value="{{settings.db_host}}"></label>
+    <label>DB_PORT <input name="DB_PORT" value="{{settings.db_port}}" size="6"></label>
+  </p>
+  <p>
+    <label>DB_NAME <input name="DB_NAME" value="{{settings.db_name}}"></label>
+    <label>DB_USER <input name="DB_USER" value="{{settings.db_user}}"></label>
+  </p>
+  <p><label>DB_PASS <input name="DB_PASS" type="password" placeholder="(unchanged)"></label></p>
+
+  <h3>Ingest</h3>
+  <p>
+    <label>POLL_INTERVAL_S
+      <input name="POLL_INTERVAL_S" value="{{settings.poll_interval_s}}" size="6"></label>
+    <label>GRAPH_LOOKBACK_HOURS
+      <input name="GRAPH_LOOKBACK_HOURS" value="{{settings.graph_lookback_hours}}" size="6"></label>
+  </p>
+  <p><label>MGMT_CONTENT_TYPES
+    <input name="MGMT_CONTENT_TYPES" value="{{settings.mgmt_content_types}}" size="60"></label></p>
+
+  <h3>Dashboard / OIDC</h3>
+  <p><label>WEB_PORT <input name="WEB_PORT" value="{{settings.web_port}}" size="6"></label>
+     <label>TZ <input name="TZ" value="{{settings.tz}}" size="20"></label></p>
+  <p><label>OIDC_ISSUER_URL
+    <input name="OIDC_ISSUER_URL" value="{{settings.oidc_issuer_url}}" size="60"></label></p>
+  <p><label>OIDC_CLIENT_ID
+    <input name="OIDC_CLIENT_ID" value="{{settings.oidc_client_id}}" size="48"></label></p>
+  <p><label>OIDC_CLIENT_SECRET
+    <input name="OIDC_CLIENT_SECRET" type="password" placeholder="(unchanged)" size="48"></label></p>
+  <p><label>OIDC_REDIRECT_URI
+    <input name="OIDC_REDIRECT_URI" value="{{settings.oidc_redirect_uri}}" size="60"></label></p>
+  <p><label>OIDC_REQUIRED_GROUP
+    <input name="OIDC_REQUIRED_GROUP" value="{{settings.oidc_required_group}}"></label></p>
+  <p><label><input type="checkbox" name="LOCAL_LOGIN_ENABLED" value="true"
+    {% if settings.local_login_enabled %}checked{% endif %}> LOCAL_LOGIN_ENABLED</label></p>
+
+  <p><button type="submit">Save</button></p>
+</form>
+<script>
+const STATUS_EL = document.getElementById('db-status');
+
+function renderStatus(j) {
+  if (!j.db_connected) {
+    STATUS_EL.innerHTML =
+      '<strong class="err">✗ Database unreachable.</strong> ' +
+      '<code>' + (j.db_error || 'unknown') + '</code><br>' +
+      '<em>Fix DB_* fields below, click Save, then Test DB.</em>';
+    return;
+  }
+  const present = j.tables_present || {};
+  const missing = Object.entries(present).filter(([,v]) => !v).map(([k]) => k);
+  const drift = j.drift || {};
+  const driftKeys = Object.keys(drift);
+
+  if (j.ready) {
+    STATUS_EL.innerHTML =
+      '<strong class="ok">✓ Database ready.</strong> ' +
+      'All contract + aux tables present and schema matches.';
+    return;
+  }
+  if (driftKeys.length) {
+    let html = '<strong class="err">✗ Schema drift detected.</strong> ' +
+               '<em>The worker will refuse to start until this is resolved.</em><br><br>';
+    for (const t of driftKeys) {
+      html += '<code>' + t + '</code>:<ul>';
+      for (const d of drift[t]) html += '<li><code>' + d + '</code></li>';
+      html += '</ul>';
+    }
+    html += '<small>Either ALTER the existing table to match (see PLAN.md §3.1) or ' +
+            'DROP it and click <b>Initialize tables</b> below.</small><br>' +
+            '<button onclick="initTables()" style="margin-top:0.4rem;">Initialize tables</button>';
+    STATUS_EL.innerHTML = html;
+    return;
+  }
+  if (missing.length) {
+    STATUS_EL.innerHTML =
+      '<strong class="warn">⚠ Missing tables:</strong> <code>' + missing.join(', ') + '</code><br>' +
+      '<button onclick="initTables()" style="margin-top:0.4rem;">Initialize tables</button>';
+    return;
+  }
+  STATUS_EL.textContent = 'Status unclear; reload page.';
+}
+
+async function refreshStatus() {
+  try {
+    const r = await fetch('/config/db-status');
+    renderStatus(await r.json());
+  } catch (e) {
+    STATUS_EL.textContent = 'Status check failed: ' + e;
+  }
+}
+
+async function initTables() {
+  STATUS_EL.innerHTML = '<em>Running bootstrap…</em>';
+  const r = await fetch('/config/db-init', {method:'POST'});
+  const j = await r.json();
+  if (!j.ok) {
+    alert('Init failed: ' + (j.error || 'unknown'));
+  }
+  renderStatus(j.status || {db_connected:false, db_error:'no status returned'});
+}
+
+async function testConn(kind) {
+  const r = await fetch('/config/test/' + kind, {method:'POST'});
+  const j = await r.json();
+  document.getElementById('result').textContent =
+    (j.ok ? '✓ ok ' : '✗ ') + (j.status || j.error || '');
+  if (kind === 'db') refreshStatus();
+}
+
+refreshStatus();
+</script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Mapping rules</h2>
+<p>
+  Subsource:
+  <select onchange="location.href='/mapping?subsource='+encodeURIComponent(this.value)">
+    {% for ss in subsources %}
+    <option {% if ss==subsource %}selected{% endif %}>{{ss}}</option>
+    {% endfor %}
+  </select>
+  &nbsp;
+  Canonicalization coverage (24h):
+  {% set cls = "green" if coverage.pct >= 95 else ("yellow" if coverage.pct >= 90 else "red") %}
+  <span class="gauge {{cls}}">{{coverage.pct}}%</span>
+  <small>{{coverage.unknown}}/{{coverage.total}} unknown</small>
+</p>
+{% if not rules %}
+<p><em>No active DB rules for this subsource. Defaults from
+<code>app/mappings/default_{{subsource | replace('.','_')}}.yml</code> are in use.</em></p>
+{% else %}
+<table>
+  <tr><th>target_column</th><th>source_jsonpath</th><th>transform</th><th>v</th><th>valid_from</th></tr>
+  {% for r in rules %}
+  <tr>
+    <td>{{r.target_column}}</td>
+    <td><code>{{r.source_jsonpath}}</code></td>
+    <td><code>{{r.transform or ""}}</code></td>
+    <td>{{r.version}}</td>
+    <td>{{r.valid_from}}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h3>Edit / add rule (creates a new version)</h3>
+<form method="post" action="/mapping/edit">
+  <input type="hidden" name="subsource" value="{{subsource}}">
+  <p>target_column
+    <input name="target_column" placeholder="operation, instance, user_name, extra_data.x"></p>
+  <p>source_jsonpath
+    <input name="source_jsonpath" placeholder="$.activityDisplayName" size="50"></p>
+  <p>transform
+    <input name="transform" placeholder="coalesce:$.fallback; canonicalize:operations" size="60"></p>
+  <p><button type="submit">Save new version</button></p>
+</form>
+{% endblock %}
