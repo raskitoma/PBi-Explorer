@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Microsoft 365 — Tenant authorization</h2>
+{% if request.query_params.get('ok') %}<p class="ok">Consent acknowledged.</p>{% endif %}
+{% if request.query_params.get('error') %}<p class="err">Error: {{request.query_params.get('error')}}</p>{% endif %}
+<p>Click below to grant admin consent for the configured app registration.
+   You'll be redirected to Microsoft and back.</p>
+<form method="post" action="/m365/authorize"><button type="submit">Authorize tenant</button></form>
+
+<h3>Required permissions</h3>
+<ul>
+  <li><strong>Microsoft Graph (Application):</strong>
+    AuditLog.Read.All · Directory.Read.All · User.Read.All</li>
+  <li><strong>Office 365 Management APIs (Application):</strong>
+    ActivityFeed.Read</li>
+</ul>
+{% endblock %}

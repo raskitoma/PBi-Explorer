@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><title>Sign in</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 360px; margin: 4rem auto; }
+  input { display: block; width: 100%; padding: 0.5rem; margin: 0.3rem 0 1rem;
+          border: 1px solid #d0d7de; border-radius: 4px; box-sizing: border-box; }
+  button { padding: 0.5rem 1rem; cursor: pointer; }
+  .err { color: #cf222e; }
+</style>
+</head>
+<body>
+<h2>Sign in</h2>
+{% if oidc %}<p><a href="/auth/oidc/start">→ Continue with SSO</a></p><hr>{% endif %}
+{% if local %}
+<form method="post" action="/login">
+  <label>Username<input name="username" required autofocus></label>
+  <label>Password<input name="password" type="password" required></label>
+  <button type="submit">Sign in</button>
+</form>
+{% endif %}
+</body></html>

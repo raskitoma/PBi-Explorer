@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}M365 Audit{% endblock %}</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+         max-width: 1100px; margin: 1rem auto; padding: 0 1rem; color: #222; }
+  nav { display: flex; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #ccc;
+        padding-bottom: 0.5rem; align-items: center; }
+  nav strong { margin-right: 0.5rem; }
+  nav a { text-decoration: none; color: #0969da; }
+  nav form.inline { display: inline; margin-left: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #eee;
+           vertical-align: top; }
+  th { background: #f6f8fa; }
+  .ok   { color: #1a7f37; }
+  .err  { color: #cf222e; }
+  .warn { color: #9a6700; }
+  pre { background: #f6f8fa; padding: 0.6rem; overflow-x: auto; }
+  code { font-family: ui-monospace, SFMono-Regular, monospace; }
+  input, select, textarea, button {
+    font: inherit; padding: 0.3rem 0.5rem; border: 1px solid #d0d7de; border-radius: 4px;
+  }
+  button { background: #f6f8fa; cursor: pointer; }
+  button:hover { background: #eaeef2; }
+  .gauge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px;
+           font-weight: 600; }
+  .gauge.green  { background: #d1f4d8; color: #1a7f37; }
+  .gauge.yellow { background: #fff3cd; color: #8a6d3b; }
+  .gauge.red    { background: #fde0dc; color: #cf222e; }
+</style>
+</head>
+<body>
+<nav>
+  <strong>M365 Audit</strong>
+  <a href="/runs">Runs</a>
+  <a href="/discover">Discover</a>
+  <a href="/mapping">Mapping</a>
+  <a href="/m365">M365</a>
+  <a href="/config">Config</a>
+  <a href="/admin-events">Admin Log</a>
+  <form class="inline" method="post" action="/logout">
+    <button type="submit">Logout</button>
+  </form>
+</nav>
+{% block content %}{% endblock %}
+</body>
+</html>

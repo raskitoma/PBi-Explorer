@@ -1,0 +1,63 @@
+name: m365ai
+
+services:
+  web:
+    container_name: m365ai-web
+    image: m365ai:latest
+    build: .
+    command: ["app.web"]
+    init: true
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
+    env_file: .env
+    environment:
+      - ENV_FILE_PATH=/app/.env
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    tmpfs:
+      - /tmp
+      - /run
+    volumes:
+      - ./data:/data
+      - ./logs:/logs
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+
+  worker:
+    container_name: m365ai-worker
+    image: m365ai:latest
+    build: .
+    command: ["app.worker"]
+    init: true
+    env_file: .env
+    environment:
+      - ENV_FILE_PATH=/app/.env
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    tmpfs:
+      - /tmp
+      - /run
+    volumes:
+      - ./data:/data
+      - ./logs:/logs
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+
+  db:
+    container_name: m365ai-db
+    image: mariadb:11.4
+    profiles: ["with-mariadb"]
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-changeme}
+      MARIADB_DATABASE: ${DB_NAME:-m365_audit}
+      MARIADB_USER: ${DB_USER:-m365}
+      MARIADB_PASSWORD: ${DB_PASS:-changeme}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mariadb_data: {}
