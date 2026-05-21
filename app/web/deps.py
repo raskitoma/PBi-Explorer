@@ -4,10 +4,18 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Request
 from sqlalchemy import Engine
 
 from app.db.engine import get_engine
+
+
+class NotAuthenticated(Exception):
+    """Raised when an auth-required route is hit without a valid session.
+
+    Handled in app.web.__init__ so HTML clients get a 303 redirect to /login
+    while API clients still get a JSON 401.
+    """
 
 
 def request_id(request: Request) -> str:
@@ -17,7 +25,7 @@ def request_id(request: Request) -> str:
 def current_principal(request: Request) -> dict[str, Any]:
     p = request.session.get("principal")
     if not p:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="not authenticated")
+        raise NotAuthenticated()
     return p
 
 

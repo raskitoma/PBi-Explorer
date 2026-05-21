@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.db.bootstrap import fail_if_drift
 from app.db.engine import get_engine
+from app.web.deps import NotAuthenticated
 from app.web.pages import (
     admin_events as admin_events_page,
     config as config_page,
@@ -71,6 +72,14 @@ def create_app() -> FastAPI:
     app.include_router(runs.router)
     app.include_router(admin_events_page.router)
     app.include_router(health.router)
+
+    @app.exception_handler(NotAuthenticated)
+    async def _not_auth(request: Request, _exc: NotAuthenticated):
+        """Browser → 303 to /login; API client → JSON 401."""
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept:
+            return RedirectResponse("/login", status_code=303)
+        return JSONResponse({"error": "not authenticated"}, status_code=401)
 
     @app.exception_handler(Exception)
     async def _all(request: Request, exc: Exception) -> JSONResponse:
