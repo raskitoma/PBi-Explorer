@@ -39,7 +39,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         log.info("web.oidc.enabled")
     engine = get_engine()
     fail_if_drift(engine)
-    log.info("web.ready", port=s.web_port, cloud=s.azure_cloud)
+    log.info(
+        "web.ready",
+        host_port=s.web_port,
+        container_port=8080,
+        cloud=s.azure_cloud,
+    )
     yield
 
 
