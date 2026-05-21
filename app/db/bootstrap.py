@@ -164,6 +164,22 @@ class SchemaDriftError(RuntimeError):
     pass
 
 
+def _column_type_matches(expected: str, actual: str) -> bool:
+    """Compare an expected MySQL/MariaDB column type to what
+    INFORMATION_SCHEMA.COLUMNS.COLUMN_TYPE reports.
+
+    MariaDB implements `JSON` as `LONGTEXT` with an implicit JSON_VALID
+    CHECK constraint and reports it as `longtext` in INFORMATION_SCHEMA.
+    MySQL keeps a distinct `json` type. Accept both so the same drift
+    detector works against either backend without false positives.
+    """
+    actual = actual.lower()
+    expected = expected.lower()
+    if expected == "json":
+        return actual in {"json", "longtext"}
+    return actual.startswith(expected)
+
+
 def _existing_columns(engine: Engine, table: str) -> dict[str, str]:
     with engine.connect() as conn:
         rows = conn.execute(
@@ -199,7 +215,7 @@ def verify_contract(engine: Engine) -> None:
             if col not in got:
                 diffs.append(f"{table}: expected column {col} ({exp_type}), found <missing>")
                 continue
-            if not got[col].startswith(exp_type):
+            if not _column_type_matches(exp_type, got[col]):
                 diffs.append(f"{table}: expected column {col} {exp_type}, found {got[col]}")
         extra = set(got) - set(expected)
         if extra:
@@ -279,7 +295,7 @@ def check_schema_status(engine: Engine) -> dict[str, object]:
             if col not in got:
                 diffs.append(f"missing column {col} ({exp_type})")
                 continue
-            if not got[col].startswith(exp_type):
+            if not _column_type_matches(exp_type, got[col]):
                 diffs.append(f"{col}: expected {exp_type}, found {got[col]}")
         if diffs:
             drift[table] = diffs
