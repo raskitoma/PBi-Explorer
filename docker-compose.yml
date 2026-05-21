@@ -7,13 +7,15 @@ services:
     build: .
     command: ["app.web"]
     init: true
-    # By default we bind WEB_BIND_ADDR (defaults to 127.0.0.1, loopback only)
-    # to keep the dashboard internal and force TLS through a reverse proxy.
-    # Set WEB_BIND_ADDR=0.0.0.0 in .env to expose to your LAN (do this only
-    # behind a trusted network or after putting Caddy/Traefik in front — see
-    # docker-compose.proxy.yml and PLAN.md §10.3).
+    # Default: 0.0.0.0 (LAN-reachable). Set WEB_BIND_ADDR=127.0.0.1 in .env to
+    # lock the dashboard to loopback (recommended when terminating TLS in a
+    # reverse proxy — see docker-compose.proxy.yml and PLAN.md §10.3).
     ports:
-      - "${WEB_BIND_ADDR:-127.0.0.1}:${WEB_PORT:-8080}:8080"
+      - target: 8080
+        published: "${WEB_PORT:-8080}"
+        host_ip: "${WEB_BIND_ADDR:-0.0.0.0}"
+        protocol: tcp
+        mode: host
     env_file: .env
     environment:
       - ENV_FILE_PATH=/app/.env
