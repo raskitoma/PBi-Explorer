@@ -73,9 +73,9 @@ async def show(request: Request, _p: CurrentPrincipal):  # noqa: ANN201
         "APP_SECRET_KEY": _suffix(s.app_secret_key.get_secret_value()),
     }
     return templates.TemplateResponse(
+        request,
         "config.html",
         {
-            "request": request,
             "settings": s,
             "secret_suffixes": secret_suffixes,
         },

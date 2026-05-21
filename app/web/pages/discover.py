@@ -20,7 +20,7 @@ router = APIRouter(prefix="/discover", tags=["discover"])
 @router.get("")
 async def page(request: Request, _p: CurrentPrincipal):  # noqa: ANN201
     templates = request.app.state.templates
-    return templates.TemplateResponse("discover.html", {"request": request})
+    return templates.TemplateResponse(request, "discover.html", {})
 
 
 @router.get("/sample")

@@ -17,7 +17,7 @@ router = APIRouter(prefix="/m365", tags=["m365"])
 @router.get("")
 async def page(request: Request, _p: CurrentPrincipal):  # noqa: ANN201
     templates = request.app.state.templates
-    return templates.TemplateResponse("m365.html", {"request": request})
+    return templates.TemplateResponse(request, "m365.html", {})
 
 
 @router.post("/authorize")

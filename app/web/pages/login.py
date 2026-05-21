@@ -26,8 +26,9 @@ async def login_get(request: Request):  # noqa: ANN201
     if s.oidc_enabled and not s.local_login_enabled:
         return RedirectResponse("/auth/oidc/start", status_code=302)
     return templates.TemplateResponse(
+        request,
         "login.html",
-        {"request": request, "oidc": s.oidc_enabled, "local": s.local_login_enabled},
+        {"oidc": s.oidc_enabled, "local": s.local_login_enabled},
     )
 
 

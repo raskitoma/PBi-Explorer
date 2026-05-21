@@ -60,9 +60,9 @@ async def page(request: Request, _p: CurrentPrincipal):  # noqa: ANN201
     rules = repo.get_active_rules(eng, subsource)
     coverage = _coverage(eng)
     return templates.TemplateResponse(
+        request,
         "mapping.html",
         {
-            "request": request,
             "rules": rules,
             "subsource": subsource,
             "subsources": SUBSOURCES,

@@ -20,6 +20,7 @@ async def page(  # noqa: ANN201
     templates = request.app.state.templates
     rows = repo.list_admin_events(get_engine(), actor=actor, action=action, limit=200)
     return templates.TemplateResponse(
+        request,
         "admin_events.html",
-        {"request": request, "rows": rows, "actor": actor, "action": action},
+        {"rows": rows, "actor": actor, "action": action},
     )

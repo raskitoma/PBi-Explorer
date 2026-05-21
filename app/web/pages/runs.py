@@ -24,7 +24,7 @@ async def page(  # noqa: ANN201
     since_d: date | None = date.fromisoformat(since) if since else None
     rows = repo.list_runs(get_engine(), source=source, since=since_d, limit=200)
     return templates.TemplateResponse(
-        "runs.html", {"request": request, "rows": rows, "source": source}
+        request, "runs.html", {"rows": rows, "source": source}
     )
 
 
@@ -54,9 +54,9 @@ async def detail(request: Request, _p: CurrentPrincipal, run_id: int):  # noqa: 
             .all()
         )
     return templates.TemplateResponse(
+        request,
         "runs_detail.html",
         {
-            "request": request,
             "run": dict(run_row) if run_row else None,
             "samples": [dict(s) for s in samples],
         },
