@@ -40,6 +40,14 @@ if [[ -f "$ENV_FILE" ]]; then
   # shellcheck disable=SC1090
   while IFS='=' read -r k v; do
     [[ -z "$k" || "$k" == \#* ]] && continue
+    # We write values single-quoted (see env-write block below) so docker
+    # compose doesn't interpolate '$' inside them. Strip surrounding single
+    # OR double quotes on read so the round-trip is a no-op.
+    if [[ "$v" == "'"*"'" ]]; then
+      v="${v#"'"}"; v="${v%"'"}"
+    elif [[ "$v" == '"'*'"' ]]; then
+      v="${v#\"}"; v="${v%\"}"
+    fi
     CFG["$k"]="$v"
   done < "$ENV_FILE"
 fi
