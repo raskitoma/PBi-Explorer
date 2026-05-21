@@ -2,6 +2,15 @@
 {% block content %}
 <h2>Configuration</h2>
 
+{% if not settings.ingest_enabled %}
+<div style="padding:0.6rem 0.8rem; border:1px solid #d0d7de; border-radius:6px;
+            margin-bottom:1rem; background:#fff3cd; color:#8a6d3b;">
+  <strong>Ingest is DISABLED.</strong> No rows are being written to your audit DB.
+  Use <a href="/discover">/discover</a> to pull samples and <a href="/mapping">/mapping</a>
+  to verify canonicalization, then toggle <code>INGEST_ENABLED</code> below.
+</div>
+{% endif %}
+
 <div id="db-status"
      style="padding: 0.6rem 0.8rem; border: 1px solid #d0d7de; border-radius: 6px; margin-bottom: 1rem; background: #f6f8fa;">
   <em>Loading database status…</em>
@@ -68,6 +77,16 @@
   </p>
   <p><label>MGMT_CONTENT_TYPES
     <input name="MGMT_CONTENT_TYPES" value="{{settings.mgmt_content_types}}" size="60"></label></p>
+  <p>
+    <label>
+      <input type="checkbox" name="INGEST_ENABLED" value="true"
+             {% if settings.ingest_enabled %}checked{% endif %}>
+      <strong>INGEST_ENABLED</strong>
+    </label>
+    <small>When OFF, the worker's pollers no-op. Flip ON only after you've
+    validated mappings via <a href="/discover">/discover</a> and
+    <a href="/mapping">/mapping</a>.</small>
+  </p>
 
   <h3>Dashboard / OIDC</h3>
   <p><label>WEB_PORT <input name="WEB_PORT" value="{{settings.web_port}}" size="6"></label>

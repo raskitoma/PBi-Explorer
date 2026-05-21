@@ -79,6 +79,9 @@ def _process_events(
 
 def poll_graph_feed(feed: str) -> None:
     s = settings()
+    if not s.ingest_enabled:
+        log.debug("graph.poll.disabled", feed=feed)
+        return
     eng = get_engine()
     state_key = f"graph:{feed}:next_link"
     cursor = repo.state_get(eng, state_key)
@@ -112,6 +115,9 @@ def _subsource_for_content_type(ct: str) -> str:
 
 
 def poll_mgmt_content_type(ct: str) -> None:
+    if not settings().ingest_enabled:
+        log.debug("mgmt.poll.disabled", content_type=ct)
+        return
     eng = get_engine()
     state_key = f"mgmt:{ct}:next_uri"
     start = repo.state_get(eng, state_key)
@@ -148,7 +154,18 @@ def _reload_handler(signum: int, _frame: object) -> None:
 def main() -> None:
     configure_logging()
     s = settings()
-    log.info("worker.starting", version="0.1.0", cloud=s.azure_cloud)
+    log.info(
+        "worker.starting",
+        version="0.1.0",
+        cloud=s.azure_cloud,
+        ingest_enabled=s.ingest_enabled,
+    )
+    if not s.ingest_enabled:
+        log.warning(
+            "worker.ingest_disabled",
+            note="Scheduler will run but pollers will no-op until INGEST_ENABLED=true. "
+                 "Use /discover and /mapping dry-run to validate, then flip the toggle in /config.",
+        )
     engine = get_engine()
     fail_if_drift(engine)
     n = repo.reconcile_orphaned_runs(engine, max_age_seconds=4 * s.poll_interval_s)

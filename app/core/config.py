@@ -13,8 +13,11 @@ AzureCloud = Literal["commercial", "gcc-high", "dod", "china"]
 
 
 class Settings(BaseSettings):
+    # Read .env first (compose-level + host-level config); then layer the
+    # runtime overrides file written by the dashboard /config save handler.
+    # Both files are optional; pydantic-settings silently skips missing ones.
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "/data/m365ai-overrides.env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -50,6 +53,10 @@ class Settings(BaseSettings):
     local_login_enabled: bool = True
 
     # Ingest
+    # Default OFF so a fresh deploy never starts writing rows before the
+    # operator has reviewed mappings via /discover + /mapping dry-run.
+    # Flip via the /config GUI when ready.
+    ingest_enabled: bool = False
     poll_interval_s: int = 300
     graph_lookback_hours: int = 24
     mgmt_content_types: str = (
@@ -102,13 +109,24 @@ def reload_settings() -> Settings:
 
 
 def atomic_write_env(path: Path, kv: dict[str, str]) -> None:
-    """Atomic .env writer used by /config edits."""
+    """Atomic .env writer used by /config edits.
+
+    Values are single-quoted so docker compose does not try to interpolate
+    any '$' characters inside them (e.g. inside a PBKDF2 password hash).
+    python-dotenv strips the quotes on read, so consumers see the raw value.
+    """
     fd, tmp = tempfile.mkstemp(prefix=".env.", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w") as f:
-            f.write(f"# updated by app at runtime\n")
+            f.write("# updated by app at runtime\n")
             for k in sorted(kv):
-                f.write(f"{k}={kv[k]}\n")
+                v = str(kv[k])
+                if "'" in v:
+                    raise ValueError(
+                        f"value for {k} contains a single quote — cannot safely "
+                        "encode in .env"
+                    )
+                f.write(f"{k}='{v}'\n")
             f.flush()
             os.fsync(f.fileno())
         os.chmod(tmp, 0o600)

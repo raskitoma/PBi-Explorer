@@ -24,6 +24,7 @@ EDITABLE_KEYS = {
     "M365_REDIRECT_URI",
     "DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASS",
     "POLL_INTERVAL_S", "GRAPH_LOOKBACK_HOURS", "MGMT_CONTENT_TYPES",
+    "INGEST_ENABLED",
     "WEB_PORT", "TZ",
     "OIDC_ISSUER_URL", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET",
     "OIDC_REDIRECT_URI", "OIDC_REQUIRED_GROUP", "OIDC_USERNAME_CLAIM",
@@ -31,8 +32,11 @@ EDITABLE_KEYS = {
 }
 SENSITIVE_KEYS = {"AZURE_CLIENT_SECRET", "DB_PASS", "OIDC_CLIENT_SECRET", "APP_SECRET_KEY"}
 DB_KEYS = {"DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASS"}
+CHECKBOX_KEYS = {"LOCAL_LOGIN_ENABLED", "INGEST_ENABLED"}
 
-ENV_PATH = Path(os.environ.get("ENV_FILE_PATH", "/app/.env"))
+# /data is a writable persistent volume; /app/.env is mounted read-only from host.
+# GUI saves go to overrides so we never need write access to the host .env.
+ENV_PATH = Path(os.environ.get("ENV_FILE_PATH", "/data/m365ai-overrides.env"))
 
 
 def _read_env() -> dict[str, str]:
@@ -81,9 +85,10 @@ async def show(request: Request, _p: CurrentPrincipal):  # noqa: ANN201
 @router.post("")
 async def save(request: Request, principal: CurrentPrincipal, request_id: RequestId):  # noqa: ANN201
     form = dict(await request.form())
-    # Checkbox sends nothing when unchecked
-    if "LOCAL_LOGIN_ENABLED" not in form:
-        form["LOCAL_LOGIN_ENABLED"] = "false"
+    # Checkboxes send nothing when unchecked — explicitly set to "false".
+    for k in CHECKBOX_KEYS:
+        if k not in form:
+            form[k] = "false"
     current = _read_env()
     diff: dict[str, tuple[str | None, str]] = {}
     for k, v in form.items():
